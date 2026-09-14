@@ -952,7 +952,17 @@ def process_vehicle_overhangs(
     # 6. CREATE ANNOTATED OUTPUT IMAGE
     # ========================================================
 
-    canvas = img_cv.copy()
+    white_bg = np.full_like(img_cv, 255)
+    smooth_mask = (
+        cv2.GaussianBlur(car_mask, (5, 5), 0).astype(float) / 255.0
+    )
+    smooth_mask_3ch = np.repeat(
+        smooth_mask[:, :, np.newaxis], 3, axis=2
+    )
+    canvas = (
+        img_cv * smooth_mask_3ch
+        + white_bg * (1.0 - smooth_mask_3ch)
+    ).astype(np.uint8)
 
 
     top_padding = 100
