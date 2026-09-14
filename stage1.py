@@ -334,7 +334,7 @@ def process_vehicle_overhangs(
         .post_process_instance_segmentation(
             outputs,
             threshold=0.30,
-            mask_threshold=0.40,
+            mask_threshold=0.55,
             target_sizes=inputs.get(
                 "original_sizes"
             ).tolist()
@@ -953,8 +953,14 @@ def process_vehicle_overhangs(
     # ========================================================
 
     white_bg = np.full_like(img_cv, 255)
+
+    # Morphological close (fill edge holes) then open (remove isolated noise)
+    morph_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
+    blend_mask = cv2.morphologyEx(car_mask, cv2.MORPH_CLOSE, morph_kernel)
+    blend_mask = cv2.morphologyEx(blend_mask, cv2.MORPH_OPEN, morph_kernel)
+
     smooth_mask = (
-        cv2.GaussianBlur(car_mask, (5, 5), 0).astype(float) / 255.0
+        cv2.GaussianBlur(blend_mask, (9, 9), 0).astype(float) / 255.0
     )
     smooth_mask_3ch = np.repeat(
         smooth_mask[:, :, np.newaxis], 3, axis=2
