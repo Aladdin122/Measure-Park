@@ -18,7 +18,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Pre-download SAM 3 model and processor into the image at build time.
 # At runtime HF_HUB_OFFLINE=1 prevents any network calls to HuggingFace.
-RUN python -c "from transformers import Sam3Model, Sam3Processor; Sam3Model.from_pretrained('facebook/sam3'); Sam3Processor.from_pretrained('facebook/sam3')"
+# HF_TOKEN is passed as a build-arg (never stored in the final image env).
+ARG HF_TOKEN
+RUN HUGGING_FACE_HUB_TOKEN=${HF_TOKEN} python -c "from transformers import Sam3Model, Sam3Processor; Sam3Model.from_pretrained('facebook/sam3'); Sam3Processor.from_pretrained('facebook/sam3')"
 
 ENV HF_HUB_OFFLINE=1
 
