@@ -952,70 +952,7 @@ def process_vehicle_overhangs(
     # 6. CREATE ANNOTATED OUTPUT IMAGE
     # ========================================================
 
-    background_canvas = (
-        np.full_like(
-            img_cv,
-            255
-        )
-    )
-
-    purple_overlay = (
-        np.full_like(
-            img_cv,
-            (
-                215,
-                120,
-                195
-            )
-        )
-    )
-
-    purple_car = (
-        cv2.addWeighted(
-            img_cv,
-            0.35,
-            purple_overlay,
-            0.65,
-            0
-        )
-    )
-
-    smooth_mask = (
-        cv2.GaussianBlur(
-            car_mask,
-            (5, 5),
-            0
-        )
-        .astype(float)
-        /
-        255.0
-    )
-
-    smooth_mask_3ch = (
-        np.repeat(
-            smooth_mask[
-                :,
-                :,
-                np.newaxis
-            ],
-            3,
-            axis=2
-        )
-    )
-
-    canvas = (
-        purple_car
-        *
-        smooth_mask_3ch
-        +
-        background_canvas
-        *
-        (
-            1.0
-            -
-            smooth_mask_3ch
-        )
-    ).astype(np.uint8)
+    canvas = img_cv.copy()
 
 
     top_padding = 100
@@ -1501,60 +1438,9 @@ def process_vehicle_overhangs(
 
     result = {
         "status": "success",
-
-        "car_length_cm":
-            float(
-                car_length_cm
-            ),
-
-        "front_side":
-            front_side,
-
-        "front_overhang_cm":
-            round(
-                float(
-                    front_overhang_cm
-                ),
-                2
-            ),
-
-        "rear_overhang_cm":
-            round(
-                float(
-                    rear_overhang_cm
-                ),
-                2
-            ),
-
-        "wheel_detection_method":
-            wheel_method,
-
-        "left_wheel_center": {
-            "x":
-                int(
-                    left_wheel_x
-                ),
-
-            "y":
-                int(
-                    left_wheel_y
-                )
-        },
-
-        "right_wheel_center": {
-            "x":
-                int(
-                    right_wheel_x
-                ),
-
-            "y":
-                int(
-                    right_wheel_y
-                )
-        },
-
-        "output_path":
-            output_path
+        "car_length_cm": float(car_length_cm),
+        "front_overhang_cm": round(float(front_overhang_cm), 2),
+        "rear_overhang_cm": round(float(rear_overhang_cm), 2),
     }
 
     print(
