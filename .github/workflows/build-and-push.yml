@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feature-testing
+      - development
 
 env:
   REGISTRY: ghcr.io

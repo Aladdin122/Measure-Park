@@ -22,9 +22,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 ARG HF_TOKEN
 RUN HUGGING_FACE_HUB_TOKEN=${HF_TOKEN} python -c "from transformers import Sam3Model, Sam3Processor; Sam3Model.from_pretrained('facebook/sam3'); Sam3Processor.from_pretrained('facebook/sam3')"
 
-ENV HF_HUB_OFFLINE=1
-
 COPY stage1.py .
+COPY stage2.py .
 COPY handler.py .
 
 CMD ["python", "-u", "handler.py"]
