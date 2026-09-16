@@ -25,6 +25,7 @@ RUN HUGGING_FACE_HUB_TOKEN=${HF_TOKEN} python -c "from transformers import Sam3M
 ENV HF_HUB_OFFLINE=1
 
 COPY stage1.py .
+COPY stage2.py .
 COPY handler.py .
 
 CMD ["python", "-u", "handler.py"]
