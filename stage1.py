@@ -1418,6 +1418,113 @@ def process_vehicle_overhangs(
 
 
     # ========================================================
+    # 6b. DIMENSION TEXT UNDER THE CAR
+    # ========================================================
+
+    front_dim_label = (
+        f"center of frontwheel to front bumper: "
+        f"{front_overhang_cm:.1f} cm"
+    )
+    rear_dim_label = (
+        f"center of backwheel to back bumper: "
+        f"{rear_overhang_cm:.1f} cm"
+    )
+
+    dim_font       = cv2.FONT_HERSHEY_DUPLEX
+    dim_font_scale = 0.52
+    dim_thickness  = 1
+    dim_pad_x      = 14
+    dim_pad_y      = 9
+
+    # Vertical position: just below the car bounding box
+    dim_y_base = padded_car_ymax + 28
+
+    # ── Front label (positioned under the front-overhang region) ─────────────
+    if front_side == "left":
+        front_label_cx = car_xmin + (front_wheel_x - car_xmin) // 2
+    else:
+        front_label_cx = front_wheel_x + (car_xmax - front_wheel_x) // 2
+
+    (fdw, fdh), _ = cv2.getTextSize(
+        front_dim_label, dim_font, dim_font_scale, dim_thickness
+    )
+
+    # Clamp so the pill never exits the canvas horizontally
+    canvas_w = canvas.shape[1]
+    front_pill_x0 = max(4, front_label_cx - fdw // 2 - dim_pad_x)
+    front_pill_x1 = min(canvas_w - 4, front_label_cx + fdw // 2 + dim_pad_x)
+    front_text_x  = front_pill_x0 + dim_pad_x
+
+    # Rounded-rectangle pill with orange fill (matches front-overhang colour)
+    pill_y0 = dim_y_base - fdh - dim_pad_y
+    pill_y1 = dim_y_base + dim_pad_y
+    radius  = (pill_y1 - pill_y0) // 2
+    cv2.rectangle(
+        canvas,
+        (front_pill_x0 + radius, pill_y0),
+        (front_pill_x1 - radius, pill_y1),
+        orange_bgr, -1
+    )
+    cv2.circle(canvas, (front_pill_x0 + radius, pill_y0 + radius), radius, orange_bgr, -1)
+    cv2.circle(canvas, (front_pill_x1 - radius, pill_y0 + radius), radius, orange_bgr, -1)
+    # Thin white border
+    cv2.rectangle(
+        canvas,
+        (front_pill_x0 + radius, pill_y0),
+        (front_pill_x1 - radius, pill_y1),
+        (255, 255, 255), 1
+    )
+    cv2.putText(
+        canvas, front_dim_label,
+        (front_text_x, dim_y_base - dim_pad_y + 1),
+        dim_font, dim_font_scale, (255, 255, 255),
+        dim_thickness, cv2.LINE_AA
+    )
+
+    # ── Rear label (positioned under the rear-overhang region) ───────────────
+    if front_side == "left":
+        rear_label_cx = rear_wheel_x + (car_xmax - rear_wheel_x) // 2
+    else:
+        rear_label_cx = car_xmin + (rear_wheel_x - car_xmin) // 2
+
+    (rdw, rdh), _ = cv2.getTextSize(
+        rear_dim_label, dim_font, dim_font_scale, dim_thickness
+    )
+
+    rear_pill_x0 = max(4, rear_label_cx - rdw // 2 - dim_pad_x)
+    rear_pill_x1 = min(canvas_w - 4, rear_label_cx + rdw // 2 + dim_pad_x)
+    rear_text_x2 = rear_pill_x0 + dim_pad_x
+
+    # Second row if the pills would overlap
+    second_row   = (rear_pill_x0 < front_pill_x1 + 8)
+    rear_y_base  = dim_y_base + (fdh + dim_pad_y * 2 + 10 if second_row else 0)
+
+    rpill_y0 = rear_y_base - rdh - dim_pad_y
+    rpill_y1 = rear_y_base + dim_pad_y
+    rradius  = (rpill_y1 - rpill_y0) // 2
+    cv2.rectangle(
+        canvas,
+        (rear_pill_x0 + rradius, rpill_y0),
+        (rear_pill_x1 - rradius, rpill_y1),
+        green_bgr, -1
+    )
+    cv2.circle(canvas, (rear_pill_x0 + rradius, rpill_y0 + rradius), rradius, green_bgr, -1)
+    cv2.circle(canvas, (rear_pill_x1 - rradius, rpill_y0 + rradius), rradius, green_bgr, -1)
+    cv2.rectangle(
+        canvas,
+        (rear_pill_x0 + rradius, rpill_y0),
+        (rear_pill_x1 - rradius, rpill_y1),
+        (255, 255, 255), 1
+    )
+    cv2.putText(
+        canvas, rear_dim_label,
+        (rear_text_x2, rear_y_base - dim_pad_y + 1),
+        dim_font, dim_font_scale, (255, 255, 255),
+        dim_thickness, cv2.LINE_AA
+    )
+
+
+    # ========================================================
     # 7. SAVE OUTPUT
     # ========================================================
 
@@ -1455,8 +1562,8 @@ def process_vehicle_overhangs(
     result = {
         "status": "success",
         "car_length_cm": float(car_length_cm),
-        "front_overhang_cm": round(float(front_overhang_cm), 2),
-        "rear_overhang_cm": round(float(rear_overhang_cm), 2),
+        "center_of_frontwheel_to_front_bumper_cm": round(float(front_overhang_cm), 2),
+        "center_of_backwheel_to_back_bumper_cm": round(float(rear_overhang_cm), 2),
     }
 
     print(
@@ -1464,12 +1571,12 @@ def process_vehicle_overhangs(
     )
 
     print(
-        f"[RESULT] Front Overhang: "
+        f"[RESULT] Center of frontwheel to front bumper: "
         f"{front_overhang_cm:.2f} cm"
     )
 
     print(
-        f"[RESULT] Rear Overhang: "
+        f"[RESULT] Center of backwheel to back bumper: "
         f"{rear_overhang_cm:.2f} cm"
     )
 

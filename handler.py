@@ -95,7 +95,9 @@ def _handle_stage2(job_input: dict, request_id: str) -> dict:
       ref_image_url   – URL of the Stage 1 input image (clean car photo used as template).
       park_image_url  – URL of the parking scene photo.
       side            – "front" or "back".
-      overhang_cm     – The overhang value in cm from Stage 1 output.
+      overhang_cm     – The value in cm from Stage 1 output:
+                        use 'center_of_frontwheel_to_front_bumper_cm' for side='front',
+                        or  'center_of_backwheel_to_back_bumper_cm'  for side='back'.
       return_image_base64 – (optional, default True) whether to include annotated image.
     """
     ref_image_url  = job_input.get("ref_image_url")
