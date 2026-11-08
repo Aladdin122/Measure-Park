@@ -1418,109 +1418,118 @@ def process_vehicle_overhangs(
 
 
     # ========================================================
-    # 6b. DIMENSION TEXT UNDER THE CAR
+    # 6b. DIMENSION LEGEND CARD UNDER THE CAR
     # ========================================================
 
-    front_dim_label = (
-        f"center of frontwheel to front bumper: "
-        f"{front_overhang_cm:.1f} cm"
+    card_line1 = (
+        f"Front wheel center to front bumper = {front_overhang_cm:.1f} cm"
     )
-    rear_dim_label = (
-        f"center of backwheel to back bumper: "
-        f"{rear_overhang_cm:.1f} cm"
+    card_line2 = (
+        f"Back wheel center to back bumper = {rear_overhang_cm:.1f} cm"
     )
 
-    dim_font       = cv2.FONT_HERSHEY_DUPLEX
-    dim_font_scale = 0.52
-    dim_thickness  = 1
-    dim_pad_x      = 14
-    dim_pad_y      = 9
+    card_font = cv2.FONT_HERSHEY_SIMPLEX
+    card_font_scale = 0.52
+    card_font_thickness = 1
+    card_text_color = (0, 0, 0)
 
-    # Vertical position: just below the car bounding box
-    dim_y_base = padded_car_ymax + 28
+    (w1, h1), _ = cv2.getTextSize(card_line1, card_font, card_font_scale, card_font_thickness)
+    (w2, h2), _ = cv2.getTextSize(card_line2, card_font, card_font_scale, card_font_thickness)
+    max_text_w = max(w1, w2)
+    line_h = max(h1, h2)
 
-    # ── Front label (positioned under the front-overhang region) ─────────────
-    if front_side == "left":
-        front_label_cx = car_xmin + (front_wheel_x - car_xmin) // 2
-    else:
-        front_label_cx = front_wheel_x + (car_xmax - front_wheel_x) // 2
+    swatch_size = 12
+    gap_swatch_text = 12
+    line_spacing = 16
+    pad_x = 20
+    pad_y = 16
 
-    (fdw, fdh), _ = cv2.getTextSize(
-        front_dim_label, dim_font, dim_font_scale, dim_thickness
-    )
+    card_w = pad_x + swatch_size + gap_swatch_text + max_text_w + pad_x
+    card_h = pad_y + line_h + line_spacing + line_h + pad_y
 
-    # Clamp so the pill never exits the canvas horizontally
-    canvas_w = canvas.shape[1]
-    front_pill_x0 = max(4, front_label_cx - fdw // 2 - dim_pad_x)
-    front_pill_x1 = min(canvas_w - 4, front_label_cx + fdw // 2 + dim_pad_x)
-    front_text_x  = front_pill_x0 + dim_pad_x
+    # Position: lower-right area under the car, aligned with car_xmax
+    card_x2 = min(canvas.shape[1] - 25, car_xmax)
+    card_x1 = max(20, card_x2 - card_w)
+    card_x2 = card_x1 + card_w
 
-    # Rounded-rectangle pill with orange fill (matches front-overhang colour)
-    pill_y0 = dim_y_base - fdh - dim_pad_y
-    pill_y1 = dim_y_base + dim_pad_y
-    radius  = (pill_y1 - pill_y0) // 2
+    card_y1 = padded_car_ymax + 45
+    card_y2 = card_y1 + card_h
+
+    # Ensure canvas has enough bottom space so card is never cut off
+    if card_y2 + 25 > canvas.shape[0]:
+        extra_bottom = (card_y2 + 35) - canvas.shape[0]
+        canvas = cv2.copyMakeBorder(
+            canvas,
+            0,
+            extra_bottom,
+            0,
+            0,
+            cv2.BORDER_CONSTANT,
+            value=(255, 255, 255)
+        )
+
+    # 1. White background fill
     cv2.rectangle(
         canvas,
-        (front_pill_x0 + radius, pill_y0),
-        (front_pill_x1 - radius, pill_y1),
-        orange_bgr, -1
+        (card_x1, card_y1),
+        (card_x2, card_y2),
+        (255, 255, 255),
+        -1
     )
-    cv2.circle(canvas, (front_pill_x0 + radius, pill_y0 + radius), radius, orange_bgr, -1)
-    cv2.circle(canvas, (front_pill_x1 - radius, pill_y0 + radius), radius, orange_bgr, -1)
-    # Thin white border
+
+    # 2. Black border (1 px)
     cv2.rectangle(
         canvas,
-        (front_pill_x0 + radius, pill_y0),
-        (front_pill_x1 - radius, pill_y1),
-        (255, 255, 255), 1
+        (card_x1, card_y1),
+        (card_x2, card_y2),
+        (0, 0, 0),
+        1
+    )
+
+    # 3. Item 1: Front wheel (Orange swatch + Text)
+    swatch1_x = card_x1 + pad_x
+    text1_y = card_y1 + pad_y + line_h
+    swatch1_y = text1_y - line_h + (line_h - swatch_size) // 2
+
+    cv2.rectangle(
+        canvas,
+        (swatch1_x, swatch1_y),
+        (swatch1_x + swatch_size, swatch1_y + swatch_size),
+        orange_bgr,
+        -1
     )
     cv2.putText(
-        canvas, front_dim_label,
-        (front_text_x, dim_y_base - dim_pad_y + 1),
-        dim_font, dim_font_scale, (255, 255, 255),
-        dim_thickness, cv2.LINE_AA
+        canvas,
+        card_line1,
+        (swatch1_x + swatch_size + gap_swatch_text, text1_y),
+        card_font,
+        card_font_scale,
+        card_text_color,
+        card_font_thickness,
+        cv2.LINE_AA
     )
 
-    # ── Rear label (positioned under the rear-overhang region) ───────────────
-    if front_side == "left":
-        rear_label_cx = rear_wheel_x + (car_xmax - rear_wheel_x) // 2
-    else:
-        rear_label_cx = car_xmin + (rear_wheel_x - car_xmin) // 2
+    # 4. Item 2: Back wheel (Green swatch + Text)
+    swatch2_x = swatch1_x
+    text2_y = text1_y + line_h + line_spacing
+    swatch2_y = text2_y - line_h + (line_h - swatch_size) // 2
 
-    (rdw, rdh), _ = cv2.getTextSize(
-        rear_dim_label, dim_font, dim_font_scale, dim_thickness
-    )
-
-    rear_pill_x0 = max(4, rear_label_cx - rdw // 2 - dim_pad_x)
-    rear_pill_x1 = min(canvas_w - 4, rear_label_cx + rdw // 2 + dim_pad_x)
-    rear_text_x2 = rear_pill_x0 + dim_pad_x
-
-    # Second row if the pills would overlap
-    second_row   = (rear_pill_x0 < front_pill_x1 + 8)
-    rear_y_base  = dim_y_base + (fdh + dim_pad_y * 2 + 10 if second_row else 0)
-
-    rpill_y0 = rear_y_base - rdh - dim_pad_y
-    rpill_y1 = rear_y_base + dim_pad_y
-    rradius  = (rpill_y1 - rpill_y0) // 2
     cv2.rectangle(
         canvas,
-        (rear_pill_x0 + rradius, rpill_y0),
-        (rear_pill_x1 - rradius, rpill_y1),
-        green_bgr, -1
-    )
-    cv2.circle(canvas, (rear_pill_x0 + rradius, rpill_y0 + rradius), rradius, green_bgr, -1)
-    cv2.circle(canvas, (rear_pill_x1 - rradius, rpill_y0 + rradius), rradius, green_bgr, -1)
-    cv2.rectangle(
-        canvas,
-        (rear_pill_x0 + rradius, rpill_y0),
-        (rear_pill_x1 - rradius, rpill_y1),
-        (255, 255, 255), 1
+        (swatch2_x, swatch2_y),
+        (swatch2_x + swatch_size, swatch2_y + swatch_size),
+        green_bgr,
+        -1
     )
     cv2.putText(
-        canvas, rear_dim_label,
-        (rear_text_x2, rear_y_base - dim_pad_y + 1),
-        dim_font, dim_font_scale, (255, 255, 255),
-        dim_thickness, cv2.LINE_AA
+        canvas,
+        card_line2,
+        (swatch2_x + swatch_size + gap_swatch_text, text2_y),
+        card_font,
+        card_font_scale,
+        card_text_color,
+        card_font_thickness,
+        cv2.LINE_AA
     )
 
 
