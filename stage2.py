@@ -412,21 +412,90 @@ def measure_parking_gap(
     cv2.arrowedLine(canvas, (ref_bumper_x, mid_y), (obstacle_bumper_x, mid_y), (0, 200, 0), 2, tipLength=0.05)
     cv2.arrowedLine(canvas, (obstacle_bumper_x, mid_y), (ref_bumper_x, mid_y), (0, 200, 0), 2, tipLength=0.05)
 
-    # Draw label
-    label = f"Gap ({side}): {gap_cm:.1f} cm"
-    (lbl_w, lbl_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
-    cx_box = min(ref_bumper_x, obstacle_bumper_x) + gap_pixels // 2
-    cv2.rectangle(
-        canvas,
-        (cx_box - lbl_w // 2 - 10, 35),
-        (cx_box + lbl_w // 2 + 10, 35 + lbl_h + 14),
-        (255, 255, 255), -1,
-    )
+    # ── Overhang dimension line under the target car ─────────────────────────
+    oh_x_start = min(active_wheel_x, ref_bumper_x)
+    oh_x_end   = max(active_wheel_x, ref_bumper_x)
+    ruler_y    = cy + ch + 35
+    tick_half  = 12
+
+    # Ensure canvas has sufficient height for ruler and info card
+    min_required_h = max(ruler_y + 50, cy + ch + 130, oy + oh + 130)
+    if canvas.shape[0] < min_required_h:
+        extra_h = min_required_h - canvas.shape[0] + 20
+        canvas = cv2.copyMakeBorder(
+            canvas, 0, extra_h, 0, 0, cv2.BORDER_CONSTANT, value=(255, 255, 255)
+        )
+
+    # Vertical ticks at endpoints
+    cv2.line(canvas, (oh_x_start, ruler_y - tick_half), (oh_x_start, ruler_y + tick_half), (0, 0, 0), 2)
+    cv2.line(canvas, (oh_x_end, ruler_y - tick_half), (oh_x_end, ruler_y + tick_half), (0, 0, 0), 2)
+
+    # Measurement text in the middle
+    oh_label = f"{overhang_cm:.1f}"
+    oh_font  = cv2.FONT_HERSHEY_SIMPLEX
+    oh_scale = 0.52
+    oh_thick = 2
+    (oh_tw, oh_th), _ = cv2.getTextSize(oh_label, oh_font, oh_scale, oh_thick)
+
+    mid_oh_x = (oh_x_start + oh_x_end) // 2
+    text_x0  = mid_oh_x - oh_tw // 2
+    text_x1  = mid_oh_x + oh_tw // 2
+
+    # Draw arrows pointing toward ticks if there is enough space
+    if (text_x0 - oh_x_start) > 15:
+        cv2.arrowedLine(canvas, (text_x0 - 6, ruler_y), (oh_x_start + 2, ruler_y), (0, 0, 0), 1, tipLength=0.25)
+    else:
+        cv2.line(canvas, (oh_x_start, ruler_y), (text_x0 - 4, ruler_y), (0, 0, 0), 1)
+
+    if (oh_x_end - text_x1) > 15:
+        cv2.arrowedLine(canvas, (text_x1 + 6, ruler_y), (oh_x_end - 2, ruler_y), (0, 0, 0), 1, tipLength=0.25)
+    else:
+        cv2.line(canvas, (text_x1 + 4, ruler_y), (oh_x_end, ruler_y), (0, 0, 0), 1)
+
     cv2.putText(
-        canvas, label,
-        (cx_box - lbl_w // 2, 35 + lbl_h + 7),
-        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2, cv2.LINE_AA,
+        canvas, oh_label,
+        (text_x0, ruler_y + oh_th // 2),
+        oh_font, oh_scale, (0, 0, 0), oh_thick, cv2.LINE_AA
     )
+
+    # ── Bottom-right Info Card ───────────────────────────────────────────────
+    side_capitalized = "Front" if side == "front" else "Back"
+    card_line1 = f"{side_capitalized} wheel center to {side.lower()} bumper = {overhang_cm:.1f} cm"
+    card_line2 = f"Gap ({side}) = {gap_cm:.1f} cm"
+
+    card_font  = cv2.FONT_HERSHEY_SIMPLEX
+    card_scale = 0.55
+    card_thick = 2
+    (cw1, ch1), _ = cv2.getTextSize(card_line1, card_font, card_scale, card_thick)
+    (cw2, ch2), _ = cv2.getTextSize(card_line2, card_font, card_scale, card_thick)
+    max_cw = max(cw1, cw2)
+    line_h = max(ch1, ch2)
+
+    pad_x = 24
+    pad_y = 18
+    line_gap = 16
+
+    card_w = max_cw + pad_x * 2
+    card_h = pad_y * 2 + line_h * 2 + line_gap
+
+    # Position at bottom-right corner
+    card_x2 = canvas.shape[1] - 25
+    card_x1 = max(15, card_x2 - card_w)
+    card_y2 = canvas.shape[0] - 25
+    card_y1 = card_y2 - card_h
+
+    # White card background
+    cv2.rectangle(canvas, (card_x1, card_y1), (card_x2, card_y2), (255, 255, 255), -1)
+    # 1 px black border
+    cv2.rectangle(canvas, (card_x1, card_y1), (card_x2, card_y2), (0, 0, 0), 1)
+
+    # Text lines
+    tx = card_x1 + pad_x
+    t1_y = card_y1 + pad_y + line_h
+    t2_y = t1_y + line_h + line_gap
+
+    cv2.putText(canvas, card_line1, (tx, t1_y), card_font, card_scale, (0, 0, 0), card_thick, cv2.LINE_AA)
+    cv2.putText(canvas, card_line2, (tx, t2_y), card_font, card_scale, (0, 0, 0), card_thick, cv2.LINE_AA)
 
     cv2.imwrite(output_path, canvas)
 
