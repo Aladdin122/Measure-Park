@@ -426,15 +426,15 @@ def measure_parking_gap(
             canvas, 0, extra_h, 0, 0, cv2.BORDER_CONSTANT, value=(255, 255, 255)
         )
 
-    # Vertical ticks at endpoints
-    cv2.line(canvas, (oh_x_start, ruler_y - tick_half), (oh_x_start, ruler_y + tick_half), (0, 0, 0), 2)
-    cv2.line(canvas, (oh_x_end, ruler_y - tick_half), (oh_x_end, ruler_y + tick_half), (0, 0, 0), 2)
+    # Vertical ticks at endpoints (clean 1 px)
+    cv2.line(canvas, (oh_x_start, ruler_y - tick_half), (oh_x_start, ruler_y + tick_half), (0, 0, 0), 1)
+    cv2.line(canvas, (oh_x_end, ruler_y - tick_half), (oh_x_end, ruler_y + tick_half), (0, 0, 0), 1)
 
     # Measurement text in the middle
     oh_label = f"{overhang_cm:.1f}"
     oh_font  = cv2.FONT_HERSHEY_SIMPLEX
     oh_scale = 0.52
-    oh_thick = 2
+    oh_thick = 1
     (oh_tw, oh_th), _ = cv2.getTextSize(oh_label, oh_font, oh_scale, oh_thick)
 
     mid_oh_x = (oh_x_start + oh_x_end) // 2
@@ -464,8 +464,8 @@ def measure_parking_gap(
     card_line2 = f"Gap ({side}) = {gap_cm:.1f} cm"
 
     card_font  = cv2.FONT_HERSHEY_SIMPLEX
-    card_scale = 0.55
-    card_thick = 2
+    card_scale = 0.52
+    card_thick = 1
     (cw1, ch1), _ = cv2.getTextSize(card_line1, card_font, card_scale, card_thick)
     (cw2, ch2), _ = cv2.getTextSize(card_line2, card_font, card_scale, card_thick)
     max_cw = max(cw1, cw2)
